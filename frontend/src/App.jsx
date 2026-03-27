@@ -78,6 +78,7 @@ function App() {
   const [systemOverview, setSystemOverview] = useState([]);
   const [chatQuery, setChatQuery] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const chatEndRef = useRef(null);
 
   const fetchData = async () => {
@@ -111,9 +112,15 @@ function App() {
       });
       setChatHistory(prev => [...prev, { role: "ai", text: res.data.answer }]);
     } catch (err) {
-      setChatHistory(prev => [...prev, { role: "ai", text: "Integration error." }]);
+      setChatHistory(prev => [...prev, { role: "ai", text: "Integration error. Please check backend." }]);
     }
   };
+
+  useEffect(() => {
+    if (isChatOpen) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatHistory, isChatOpen]);
 
   const health = data.current_health || {};
   const readings = data.latest_readings || [];
@@ -248,31 +255,53 @@ function App() {
           </div>
         </section>
 
-        {/* Assistant Footer Overlay */}
-        <div className="assistant-floating">
+        {/* Floating Assistant Wrapper */}
+        <div className="assistant-floating-container">
           <AnimatePresence>
-            {chatHistory.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="chat-mini-window">
-                 <div className="chat-header">AI Assistant Interface</div>
-                 <div className="chat-body">
-                   {chatHistory.slice(-2).map((msg, i) => (
-                     <p key={i} className={msg.role}>{msg.text}</p>
-                   ))}
-                   <div ref={chatEndRef} />
-                 </div>
+            {isChatOpen && (
+              <motion.div 
+                initial={{ opacity: 0, y: 50, scale: 0.9 }} 
+                animate={{ opacity: 1, y: 0, scale: 1 }} 
+                exit={{ opacity: 0, y: 50, scale: 0.9 }} 
+                className="chat-window"
+              >
+                  <div className="chat-window-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Cpu size={16} /> <span>Gemini AI Assistant</span>
+                    </div>
+                    <button onClick={() => setIsChatOpen(false)} className="close-btn">×</button>
+                  </div>
+                  <div className="chat-window-body">
+                    {chatHistory.length === 0 && <p className="welcome-text">Hi! I'm your maintenance expert. Ask me anything about {activeMachine}.</p>}
+                    {chatHistory.map((msg, i) => (
+                      <div key={i} className={`chat-message ${msg.role}`}>
+                        <div className="message-content">{msg.text}</div>
+                      </div>
+                    ))}
+                    <div ref={chatEndRef} />
+                  </div>
+                  <div className="chat-window-footer">
+                    <input 
+                      type="text" 
+                      placeholder="Ask a question..." 
+                      value={chatQuery}
+                      onChange={(e) => setChatQuery(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleChat()}
+                    />
+                    <button onClick={handleChat} className="send-btn"><ArrowRight size={18} /></button>
+                  </div>
               </motion.div>
             )}
           </AnimatePresence>
-          <div className="input-group">
-            <input 
-              type="text" 
-              placeholder="Query system intelligence... (e.g., 'What's the prediction for M-101?')" 
-              value={chatQuery}
-              onChange={(e) => setChatQuery(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleChat()}
-            />
-            <button onClick={handleChat}><ArrowRight size={20} /></button>
-          </div>
+          
+          <motion.button 
+            className={`chat-toggle-btn ${isChatOpen ? 'active' : ''}`}
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+          >
+            {isChatOpen ? <ZapOff size={24} /> : <MessageSquare size={24} />}
+          </motion.button>
         </div>
       </main>
     </div>
