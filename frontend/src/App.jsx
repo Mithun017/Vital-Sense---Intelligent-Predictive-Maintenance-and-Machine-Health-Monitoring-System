@@ -76,8 +76,7 @@ function App() {
   const [machines, setMachines] = useState([]);
   const [data, setData] = useState({ latest_readings: [], current_health: null });
   const [systemOverview, setSystemOverview] = useState([]);
-  const [chatQuery, setChatQuery] = useState("");
-  const [chatHistory, setChatHistory] = useState([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const chatEndRef = useRef(null);
 
   const fetchData = async () => {
@@ -116,8 +115,10 @@ function App() {
   };
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatHistory]);
+    if (isChatOpen) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [chatHistory, isChatOpen]);
 
   const health = data.current_health || {};
   const readings = data.latest_readings || [];
@@ -126,7 +127,7 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* 1. Left Sidebar: Fleet Overview */}
+      {/* 1. Sidebar: Fleet Overview */}
       <aside className="sidebar">
         <div className="logo-section">
           <div className="logo-icon"><Shield size={24} color="#3b82f6" /></div>
@@ -161,7 +162,7 @@ function App() {
         </div>
       </aside>
 
-      {/* 2. Center: Telemetry & Monitoring */}
+      {/* 2. Main Content: Telemetry & Monitoring */}
       <main className="main-content">
         <header className="main-header">
           <div className="header-info">
@@ -239,55 +240,66 @@ function App() {
             </div>
           </div>
         </section>
-      </main>
 
-      {/* 3. Right Sidebar: Gemini Diagnostic Assistant */}
-      <aside className="ai-sidebar">
-        <div className="ai-sidebar-header">
-          <Cpu size={20} color="var(--accent-color)" />
-          <h3>AI Diagnostic reasoning</h3>
-        </div>
-
-        <div className="ai-chat-container">
-          <div className="chat-messages">
-            {chatHistory.length === 0 && (
-              <div className="welcome-prompt">
-                <MessageSquare size={32} color="var(--text-muted)" />
-                <p>Gemini AI is ready. Ask anything about {activeMachine}'s health history or maintenance strategy.</p>
-              </div>
-            )}
-            {chatHistory.map((msg, i) => (
+        {/* 3. Floating AI Assistant */}
+        <div className="assistant-floating-container">
+          <AnimatePresence>
+            {isChatOpen && (
               <motion.div
-                key={i}
-                className={`chat-bubble ${msg.role}`}
-                initial={{ opacity: 0, x: msg.role === 'user' ? 20 : -20 }}
-                animate={{ opacity: 1, x: 0 }}
+                initial={{ opacity: 0, y: 50, scale: 0.9, x: 20 }}
+                animate={{ opacity: 1, y: 0, scale: 1, x: 0 }}
+                exit={{ opacity: 0, y: 50, scale: 0.9, x: 20 }}
+                className="chat-window"
               >
-                {msg.text}
-              </motion.div>
-            ))}
-            <div ref={chatEndRef} />
-          </div>
+                <div className="chat-window-header">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <Cpu size={18} color="var(--accent-color)" />
+                    <span>Gemini AI Diagnostic</span>
+                  </div>
+                  <button onClick={() => setIsChatOpen(false)} className="close-btn">×</button>
+                </div>
+                
+                <div className="chat-window-body">
+                  {chatHistory.length === 0 && (
+                    <div className="welcome-text">
+                      <MessageSquare size={32} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                      <p>Hi! I'm your AI maintenance expert. How can I help with {activeMachine} today?</p>
+                    </div>
+                  )}
+                  {chatHistory.map((msg, i) => (
+                    <div key={i} className={`chat-message ${msg.role}`}>
+                      <div className="message-content">{msg.text}</div>
+                    </div>
+                  ))}
+                  <div ref={chatEndRef} />
+                </div>
 
-          <div className="chat-input-area">
-            <div className="input-wrapper">
-              <input
-                type="text"
-                placeholder="Query system intel..."
-                value={chatQuery}
-                onChange={(e) => setChatQuery(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleChat()}
-              />
-              <button
-                className="ai-send-btn"
-                onClick={handleChat}
-              >
-                <ArrowRight size={18} />
-              </button>
-            </div>
-          </div>
+                <div className="chat-window-footer">
+                  <input
+                    type="text"
+                    placeholder="Ask a question..."
+                    value={chatQuery}
+                    onChange={(e) => setChatQuery(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && handleChat()}
+                  />
+                  <button onClick={handleChat} className="send-btn">
+                    <ArrowRight size={18} />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <motion.button
+            className={`chat-toggle-btn ${isChatOpen ? 'active' : ''}`}
+            onClick={() => setIsChatOpen(!isChatOpen)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {isChatOpen ? <ZapOff size={24} /> : <MessageSquare size={24} />}
+          </motion.button>
         </div>
-      </aside>
+      </main>
     </div>
   );
 }
