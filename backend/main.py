@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Optional
 from models import SensorData, PredictionResponse, Alert
 from database import save_sensor_data, save_prediction, save_alert, get_latest_readings, get_active_alerts, get_machine_health
 from ml_engine import ENGINE
-from gemini_service import generate_health_summary, answer_user_query
+from groq_service import generate_health_summary, answer_user_query
 
 app = FastAPI(title="Vital Sense AI - Advanced Predictive Maintenance")
 

@@ -7,5 +7,5 @@ numpy
 scikit-learn
 pandas
 python-multipart
-google-generativeai
+groq
 python-dotenv
