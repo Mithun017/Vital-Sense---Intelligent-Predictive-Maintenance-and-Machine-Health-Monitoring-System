@@ -12,15 +12,19 @@ The platform follows a modular distributed architecture, ensuring real-time perf
 
 ```mermaid
 graph TD
-    A[Industrial Hardware / Virtual ESP32] -->|JSON over HTTP| B(FastAPI AI Brain)
-    B -->|Persist Data| C[(MongoDB Database)]
-    B -->|Predict & Analyze| D[ML Engine]
-    D -->|RUL & XAI| B
-    B -->|Context Driven Reasoning| E[Google Gemini AI]
-    E -->|Health Summaries| B
-    B -->|Push Updates| F[React Dashboard]
-    F -->|User Interaction| G[Maintenance Manager]
-    G -->|Interactive Chat| E
+    A["Hardware / Virtual ESP32"] --- B("FastAPI AI Brain")
+    B --- C[("MongoDB Database")]
+    B --- D["Advanced ML Engine"]
+    B --- E["Google Gemini AI"]
+    B --- F["React Dashboard"]
+    F --- G["Maintenance Manager"]
+    
+    A -->|"Sensor Data (JSON)"| B
+    B -->|"Store Data"| C
+    B -->|"Predict RUL/XAI"| D
+    B -->|"Context Reasoning"| E
+    B -->|"Push Updates"| F
+    G -->|"Interactive Assistant"| E
 ```
 
 ---
