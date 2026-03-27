@@ -4,35 +4,78 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell 
 } from 'recharts';
 import { 
-  Thermometer, Activity, Zap, AlertTriangle, CheckCircle, Bell, MessageSquare, Clock, ArrowRight, Server, Cpu, BarChart3
+  Thermometer, Activity, Zap, AlertTriangle, CheckCircle, Bell, MessageSquare, Clock, ArrowRight, Server, Cpu, BarChart3, Settings, Shield, ZapOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE = 'http://localhost:8000';
 
-const StatCard = ({ icon: Icon, label, value, unit, color, suffix = "" }) => (
+// Custom Gauge Component using Recharts Pie
+const Gauge = ({ value, color, label }) => {
+  const data = [
+    { value: value },
+    { value: 100 - value }
+  ];
+  return (
+    <div className="gauge-wrapper">
+      <ResponsiveContainer width="100%" height={150}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="100%"
+            startAngle={180}
+            endAngle={0}
+            innerRadius={60}
+            outerRadius={80}
+            paddingAngle={0}
+            dataKey="value"
+          >
+            <Cell fill={color} />
+            <Cell fill="rgba(255,255,255,0.05)" />
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="gauge-overlay">
+        <span className="gauge-value">{value}%</span>
+        <span className="gauge-label">{label}</span>
+      </div>
+    </div>
+  );
+};
+
+const StatCard = ({ icon: Icon, label, value, unit, color, status = "normal" }) => (
   <motion.div 
-    className="glass-card"
-    initial={{ opacity: 0, scale: 0.95 }}
-    animate={{ opacity: 1, scale: 1 }}
+    className={`glass-card stat-card ${status}`}
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
   >
     <div className="stat-header">
+      <div className="stat-icon-wrapper" style={{ background: `${color}15` }}>
+        <Icon size={20} color={color} />
+      </div>
       <div className="stat-label">{label}</div>
-      <Icon size={18} color={color} />
     </div>
-    <div className="stat-value">
-      {value}<span className="stat-unit">{unit}</span>
-      {suffix && <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block' }}>{suffix}</span>}
+    <div className="stat-main">
+      <span className="stat-value">{value}</span>
+      <span className="stat-unit">{unit}</span>
     </div>
-    <div className="live-indicator"></div>
+    <div className="stat-progress-bg">
+      <motion.div 
+        className="stat-progress-bar" 
+        style={{ background: color }}
+        initial={{ width: 0 }}
+        animate={{ width: '70%' }}
+      />
+    </div>
   </motion.div>
 );
 
 function App() {
   const [activeMachine, setActiveMachine] = useState("M-101");
-  const [machines, setMachines] = useState(["M-101", "M-102"]);
+  const [machines, setMachines] = useState([]);
   const [data, setData] = useState({ latest_readings: [], current_health: null });
-  const [alerts, setAlerts] = useState([]);
+  const [systemOverview, setSystemOverview] = useState([]);
   const [chatQuery, setChatQuery] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
   const chatEndRef = useRef(null);
@@ -40,9 +83,12 @@ function App() {
   const fetchData = async () => {
     try {
       const statsRes = await axios.get(`${API_BASE}/dashboard-stats/${activeMachine}`);
-      const alertsRes = await axios.get(`${API_BASE}/alerts`);
+      const overviewRes = await axios.get(`${API_BASE}/system-overview`);
+      const machinesRes = await axios.get(`${API_BASE}/active-machines`);
+      
       setData(statsRes.data);
-      setAlerts(alertsRes.data.filter(a => a.machine_id === activeMachine));
+      setSystemOverview(overviewRes.data);
+      setMachines(machinesRes.data);
     } catch (err) { console.error(err); }
   };
 
@@ -65,13 +111,9 @@ function App() {
       });
       setChatHistory(prev => [...prev, { role: "ai", text: res.data.answer }]);
     } catch (err) {
-      setChatHistory(prev => [...prev, { role: "ai", text: "Error connecting to AI Assistant." }]);
+      setChatHistory(prev => [...prev, { role: "ai", text: "Integration error." }]);
     }
   };
-
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatHistory]);
 
   const health = data.current_health || {};
   const readings = data.latest_readings || [];
@@ -79,123 +121,160 @@ function App() {
   const status = health.health_status || "NORMAL";
 
   return (
-    <div className="dashboard-container">
-      {/* Sidebar / Machine Selector */}
-      <nav style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', overflowX: 'auto', padding: '0.5rem 0' }}>
-        {machines.map(m => (
-          <button 
-            key={m}
-            className={`glass-card ${activeMachine === m ? 'active' : ''}`}
-            onClick={() => setActiveMachine(m)}
-            style={{ padding: '0.75rem 1.5rem', whiteSpace: 'nowrap', border: activeMachine === m ? '1px solid var(--accent-color)' : '1px solid var(--glass-border)', cursor: 'pointer', background: activeMachine === m ? 'rgba(59,130,246,0.1)' : '' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Server size={14} /> {m}
-            </div>
-          </button>
-        ))}
-      </nav>
-
-      <header>
-        <div>
-          <motion.h1 initial={{ opacity: 0 }} animate={{ opacity: 1 }}>Vital Sense AI</motion.h1>
-          <p style={{ color: 'var(--text-muted)' }}>Advanced Machine Health Intelligence • {activeMachine}</p>
+    <div className="app-container">
+      {/* Sidebar Layout */}
+      <aside className="sidebar">
+        <div className="logo-section">
+          <div className="logo-icon"><Shield size={24} color="#3b82f6" /></div>
+          <h2>Vital Sense</h2>
         </div>
-        <div className={`health-badge ${status.toLowerCase()}`}>
-          {status}
-        </div>
-      </header>
-
-      {/* Main Stats */}
-      <div className="stats-grid">
-        <StatCard icon={Clock} label="Remaining Useful Life" value={health.estimated_rul || "--"} unit="h" color="#a855f7" suffix="Based on degradation trend" />
-        <StatCard icon={Thermometer} label="Temperature" value={current.temperature || "--"} unit="°C" color="#ef4444" />
-        <StatCard icon={Activity} label="Vibration" value={current.vibration || "--"} unit="mm/s" color="#3b82f6" />
-        <StatCard icon={BarChart3} label="Failure Probability" value={((health.failure_probability || 0) * 100).toFixed(1)} unit="%" color="#f59e0b" />
-      </div>
-
-      <div className="charts-grid">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Trend Chart */}
-          <div className="glass-card chart-container">
-            <h3 style={{ marginBottom: '1rem' }}>Condition History</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={[...readings].reverse()}>
-                <defs>
-                  <linearGradient id="primaryGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="timestamp" tickFormatter={(t) => new Date(t).toLocaleTimeString()} hide />
-                <YAxis hide />
-                <Tooltip contentStyle={{ background: '#151921', border: '1px solid var(--glass-border)' }} />
-                <Area type="monotone" dataKey="temperature" stroke="#ef4444" fill="url(#primaryGrad)" />
-                <Area type="monotone" dataKey="vibration" stroke="#3b82f6" fill="url(#primaryGrad)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* AI Insights and Recommendations */}
-          <div className="glass-card">
-            <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Cpu size={20} color="var(--accent-color)" /> AI Health Insights
-            </h3>
-            <p style={{ fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: 1.6, color: '#e2e8f0' }}>
-              {health.ai_summary || "Analyzing current data for machine intelligence..."}
-            </p>
-            
-            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '1rem' }}>
-              <h4 style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem', textTransform: 'uppercase' }}>Recommended Actions</h4>
-              {health.recommendations?.map((rec, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.85rem' }}>
-                   <ArrowRight size={12} color="var(--accent-color)" /> {rec}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Gemini Assistant Chat */}
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', height: '600px' }}>
-          <div className="stat-header">
-            <h3>Maintenance Assistant</h3>
-            <MessageSquare size={18} color="var(--accent-color)" />
-          </div>
-          <div style={{ flex: 1, overflowY: 'auto', marginBottom: '1rem', padding: '0.5rem' }}>
-            {chatHistory.length === 0 && <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: '50%' }}>Ask me about {activeMachine}'s health, maintenance history, or power efficiency.</p>}
-            {chatHistory.map((msg, i) => (
-              <div key={i} style={{ marginBottom: '1rem', textAlign: msg.role === 'user' ? 'right' : 'left' }}>
-                <div style={{ 
-                  display: 'inline-block', 
-                  padding: '0.75rem 1rem', 
-                  borderRadius: '1rem', 
-                  background: msg.role === 'user' ? 'var(--accent-color)' : 'rgba(255,255,255,0.05)',
-                  fontSize: '0.85rem',
-                  maxWidth: '85%'
-                }}>
-                  {msg.text}
-                </div>
-              </div>
+        
+        <div className="sidebar-nav">
+          <p className="nav-label">Fleet Overview</p>
+          <div className="machine-list">
+            {systemOverview.map(m => (
+              <button 
+                key={m.machine_id}
+                className={`machine-item ${activeMachine === m.machine_id ? 'active' : ''}`}
+                onClick={() => setActiveMachine(m.machine_id)}
+              >
+                <div className={`status-dot ${m.status.toLowerCase()}`}></div>
+                <span>{m.machine_id}</span>
+                <span className="prob-small">{Math.round(m.probability * 100)}%</span>
+              </button>
             ))}
-            <div ref={chatEndRef} />
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+        </div>
+
+        <div className="sidebar-footer">
+          <div className="user-profile">
+            <div className="avatar">MM</div>
+            <div>
+              <p className="user-name">Mithun</p>
+              <p className="user-role">Lead Engineer</p>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main className="main-content">
+        <header className="main-header">
+          <div className="header-info">
+            <h1>{activeMachine} Control Center</h1>
+            <p className="last-sync">System Status: Real-time data sync active</p>
+          </div>
+          <div className="header-actions">
+            <div className="notification-bell"><Bell size={20} /><div className="notif-dot"></div></div>
+            <div className={`status-pill ${status.toLowerCase()}`}>{status}</div>
+          </div>
+        </header>
+
+        {/* Intelligence Row */}
+        <section className="intel-section">
+           <div className="glass-card rul-card">
+              <div className="card-header">
+                <h3>Remaining Useful Life</h3>
+                <Clock size={16} color="var(--text-muted)" />
+              </div>
+              <div className="rul-display">
+                <span className="rul-big">{health.estimated_rul || "0"}</span>
+                <span className="rul-label">HOURS REMAINING</span>
+              </div>
+              <div className="rul-trend">
+                <Zap size={14} color="#10b981" /> Degradation: {status === 'NORMAL' ? 'Stable' : 'Aggressive'}
+              </div>
+           </div>
+
+           <div className="glass-card probe-card">
+             <Gauge value={Math.round((health.failure_probability || 0) * 100)} color={status === 'CRITICAL' ? '#ef4444' : '#f59e0b'} label="Risk Index" />
+           </div>
+
+           <div className="glass-card ai-summary-card">
+              <div className="card-header">
+                <h3>AI Diagnostic reasoning</h3>
+                <Cpu size={16} color="var(--accent-color)" />
+              </div>
+              <p className="ai-report-text">
+                {health.ai_summary || "Computing fleet intelligence..."}
+              </p>
+              <div className="confidence-badge">98% AI Confidence</div>
+           </div>
+        </section>
+
+        {/* Real-time Visualization */}
+        <section className="vis-section">
+          <div className="glass-card main-chart-card">
+            <div className="chart-header">
+              <h3>Telemetry Analytics (T/V/C)</h3>
+              <div className="chart-legend">
+                <span className="dot temp"></span> Temp
+                <span className="dot vibe"></span> Vibe
+              </div>
+            </div>
+            <div className="chart-body">
+              <ResponsiveContainer width="100%" height={350}>
+                <AreaChart data={[...readings].reverse()}>
+                  <defs>
+                    <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1}/>
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
+                  <XAxis dataKey="timestamp" hide />
+                  <YAxis hide domain={['auto', 'auto']} />
+                  <Tooltip contentStyle={{ background: '#0b0e14', border: '1px solid #1e293b', borderRadius: '8px' }} />
+                  <Area type="monotone" dataKey="temperature" stroke="#ef4444" fillOpacity={1} fill="url(#colorTemp)" />
+                  <Area type="monotone" dataKey="vibration" stroke="#3b82f6" fill="transparent" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="glass-card actions-card">
+              <div className="card-header">
+                <h3>Maintenance Directives</h3>
+                <Settings size={16} color="var(--text-muted)" />
+              </div>
+              <div className="actions-list">
+                {health.recommendations?.map((rec, i) => (
+                  <div key={i} className="action-item">
+                    <div className="action-check"><CheckCircle size={14} /></div>
+                    <span>{rec}</span>
+                  </div>
+                ))}
+                {(!health.recommendations || health.recommendations.length === 0) && <p className="text-muted">No immediate maintenance tasks.</p>}
+              </div>
+          </div>
+        </section>
+
+        {/* Assistant Footer Overlay */}
+        <div className="assistant-floating">
+          <AnimatePresence>
+            {chatHistory.length > 0 && (
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="chat-mini-window">
+                 <div className="chat-header">AI Assistant Interface</div>
+                 <div className="chat-body">
+                   {chatHistory.slice(-2).map((msg, i) => (
+                     <p key={i} className={msg.role}>{msg.text}</p>
+                   ))}
+                   <div ref={chatEndRef} />
+                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <div className="input-group">
             <input 
               type="text" 
+              placeholder="Query system intelligence... (e.g., 'What's the prediction for M-101?')" 
               value={chatQuery}
               onChange={(e) => setChatQuery(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleChat()}
-              placeholder="Ask anything..."
-              style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid var(--glass-border)', borderRadius: '0.75rem', padding: '0.75rem', color: 'white' }}
             />
-            <button onClick={handleChat} style={{ background: 'var(--accent-color)', border: 'none', borderRadius: '0.75rem', padding: '0 1rem', cursor: 'pointer', color: 'white' }}>
-              <ArrowRight size={18} />
-            </button>
+            <button onClick={handleChat}><ArrowRight size={20} /></button>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

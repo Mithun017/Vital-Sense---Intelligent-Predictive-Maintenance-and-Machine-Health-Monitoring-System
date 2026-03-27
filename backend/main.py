@@ -97,8 +97,27 @@ async def get_dashboard_stats(machine_id: str):
 @app.get("/active-machines")
 async def get_active_machines():
     # Phase 6: Multi-machine support
-    # For now, derive from recent sensor readings machine_ids
     return ["M-101", "M-102", "M-103"]
+
+@app.get("/history/{machine_id}")
+async def get_long_history(machine_id: str, limit: int = 50):
+    """Get long-term history for advanced visualization."""
+    readings = await get_latest_readings(machine_id, limit)
+    return sanitize_data(readings)
+
+@app.get("/system-overview")
+async def get_system_overview():
+    """Get a high-level overview of all monitored machines."""
+    machines = ["M-101", "M-102", "M-103"]
+    overview = []
+    for m in machines:
+        health = await get_machine_health(m)
+        overview.append({
+            "machine_id": m,
+            "status": health.get("health_status", "UNKNOWN"),
+            "probability": health.get("failure_probability", 0)
+        })
+    return sanitize_data(overview)
 
 @app.post("/assistant/query")
 async def handle_assistant_query(query: Dict[str, str] = Body(...)):
