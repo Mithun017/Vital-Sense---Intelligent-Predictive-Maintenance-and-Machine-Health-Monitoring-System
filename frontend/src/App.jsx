@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell 
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell
 } from 'recharts';
-import { 
+import {
   Thermometer, Activity, Zap, AlertTriangle, CheckCircle, Bell, MessageSquare, Clock, ArrowRight, Server, Cpu, BarChart3, Settings, Shield, ZapOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -45,7 +45,7 @@ const Gauge = ({ value, color, label }) => {
 };
 
 const StatCard = ({ icon: Icon, label, value, unit, color, status = "normal" }) => (
-  <motion.div 
+  <motion.div
     className={`glass-card stat-card ${status}`}
     initial={{ opacity: 0, y: 20 }}
     animate={{ opacity: 1, y: 0 }}
@@ -61,8 +61,8 @@ const StatCard = ({ icon: Icon, label, value, unit, color, status = "normal" }) 
       <span className="stat-unit">{unit}</span>
     </div>
     <div className="stat-progress-bg">
-      <motion.div 
-        className="stat-progress-bar" 
+      <motion.div
+        className="stat-progress-bar"
         style={{ background: color }}
         initial={{ width: 0 }}
         animate={{ width: '70%' }}
@@ -78,7 +78,6 @@ function App() {
   const [systemOverview, setSystemOverview] = useState([]);
   const [chatQuery, setChatQuery] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const chatEndRef = useRef(null);
 
   const fetchData = async () => {
@@ -86,7 +85,7 @@ function App() {
       const statsRes = await axios.get(`${API_BASE}/dashboard-stats/${activeMachine}`);
       const overviewRes = await axios.get(`${API_BASE}/system-overview`);
       const machinesRes = await axios.get(`${API_BASE}/active-machines`);
-      
+
       setData(statsRes.data);
       setSystemOverview(overviewRes.data);
       setMachines(machinesRes.data);
@@ -104,11 +103,11 @@ function App() {
     const userMsg = { role: "user", text: chatQuery };
     setChatHistory(prev => [...prev, userMsg]);
     setChatQuery("");
-    
+
     try {
-      const res = await axios.post(`${API_BASE}/assistant/query`, { 
-        machine_id: activeMachine, 
-        text: chatQuery 
+      const res = await axios.post(`${API_BASE}/assistant/query`, {
+        machine_id: activeMachine,
+        text: chatQuery
       });
       setChatHistory(prev => [...prev, { role: "ai", text: res.data.answer }]);
     } catch (err) {
@@ -117,10 +116,8 @@ function App() {
   };
 
   useEffect(() => {
-    if (isChatOpen) {
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [chatHistory, isChatOpen]);
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatHistory]);
 
   const health = data.current_health || {};
   const readings = data.latest_readings || [];
@@ -129,18 +126,18 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Sidebar Layout */}
+      {/* 1. Left Sidebar: Fleet Overview */}
       <aside className="sidebar">
         <div className="logo-section">
           <div className="logo-icon"><Shield size={24} color="#3b82f6" /></div>
           <h2>Vital Sense</h2>
         </div>
-        
+
         <div className="sidebar-nav">
-          <p className="nav-label">Fleet Overview</p>
+          <p className="nav-label">Fleet Dashboard</p>
           <div className="machine-list">
             {systemOverview.map(m => (
-              <button 
+              <button
                 key={m.machine_id}
                 className={`machine-item ${activeMachine === m.machine_id ? 'active' : ''}`}
                 onClick={() => setActiveMachine(m.machine_id)}
@@ -164,67 +161,59 @@ function App() {
         </div>
       </aside>
 
+      {/* 2. Center: Telemetry & Monitoring */}
       <main className="main-content">
         <header className="main-header">
           <div className="header-info">
-            <h1>{activeMachine} Control Center</h1>
-            <p className="last-sync">System Status: Real-time data sync active</p>
+            <h1>{activeMachine} Center</h1>
+            <p className="last-sync">Real-time Telemetry Active</p>
           </div>
           <div className="header-actions">
-            <div className="notification-bell"><Bell size={20} /><div className="notif-dot"></div></div>
             <div className={`status-pill ${status.toLowerCase()}`}>{status}</div>
           </div>
         </header>
 
         {/* Intelligence Row */}
         <section className="intel-section">
-           <div className="glass-card rul-card">
-              <div className="card-header">
-                <h3>Remaining Useful Life</h3>
-                <Clock size={16} color="var(--text-muted)" />
-              </div>
-              <div className="rul-display">
-                <span className="rul-big">{health.estimated_rul || "0"}</span>
-                <span className="rul-label">HOURS REMAINING</span>
-              </div>
-              <div className="rul-trend">
-                <Zap size={14} color="#10b981" /> Degradation: {status === 'NORMAL' ? 'Stable' : 'Aggressive'}
-              </div>
-           </div>
+          <div className="glass-card rul-card">
+            <div className="card-header">
+              <h3>RUL Prognosis</h3>
+              <Clock size={16} color="var(--text-muted)" />
+            </div>
+            <div className="rul-display">
+              <span className="rul-big">{health.estimated_rul || "0"}h</span>
+              <span className="rul-label">ESTIMATED LIFE</span>
+            </div>
+          </div>
 
-           <div className="glass-card probe-card">
-             <Gauge value={Math.round((health.failure_probability || 0) * 100)} color={status === 'CRITICAL' ? '#ef4444' : '#f59e0b'} label="Risk Index" />
-           </div>
+          <div className="glass-card probe-card">
+            <Gauge value={Math.round((health.failure_probability || 0) * 100)} color={status === 'CRITICAL' ? '#ef4444' : '#f59e0b'} label="Probability" />
+          </div>
 
-           <div className="glass-card ai-summary-card">
-              <div className="card-header">
-                <h3>AI Diagnostic reasoning</h3>
-                <Cpu size={16} color="var(--accent-color)" />
-              </div>
-              <p className="ai-report-text">
-                {health.ai_summary || "Computing fleet intelligence..."}
-              </p>
-              <div className="confidence-badge">98% AI Confidence</div>
-           </div>
+          <div className="glass-card ai-summary-card">
+            <div className="card-header">
+              <h3>XAI Diagnostic</h3>
+              <Cpu size={16} color="var(--accent-color)" />
+            </div>
+            <p className="ai-report-text">
+              {health.ai_summary || "Analyzing sensor streams..."}
+            </p>
+          </div>
         </section>
 
         {/* Real-time Visualization */}
         <section className="vis-section">
           <div className="glass-card main-chart-card">
             <div className="chart-header">
-              <h3>Telemetry Analytics (T/V/C)</h3>
-              <div className="chart-legend">
-                <span className="dot temp"></span> Temp
-                <span className="dot vibe"></span> Vibe
-              </div>
+              <h3>Telemetry Streams (T/V)</h3>
             </div>
             <div className="chart-body">
-              <ResponsiveContainer width="100%" height={350}>
+              <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={[...readings].reverse()}>
                   <defs>
                     <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1}/>
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.03)" vertical={false} />
@@ -239,73 +228,69 @@ function App() {
           </div>
 
           <div className="glass-card actions-card">
-              <div className="card-header">
-                <h3>Maintenance Directives</h3>
-                <Settings size={16} color="var(--text-muted)" />
-              </div>
-              <div className="actions-list">
-                {health.recommendations?.map((rec, i) => (
-                  <div key={i} className="action-item">
-                    <div className="action-check"><CheckCircle size={14} /></div>
-                    <span>{rec}</span>
-                  </div>
-                ))}
-                {(!health.recommendations || health.recommendations.length === 0) && <p className="text-muted">No immediate maintenance tasks.</p>}
-              </div>
+            <div className="card-header"><h3>Directives</h3></div>
+            <div className="actions-list">
+              {health.recommendations?.map((rec, i) => (
+                <div key={i} className="action-item">
+                  <CheckCircle size={14} className="action-check" />
+                  <span>{rec}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
-
-        {/* Floating Assistant Wrapper */}
-        <div className="assistant-floating-container">
-          <AnimatePresence>
-            {isChatOpen && (
-              <motion.div 
-                initial={{ opacity: 0, y: 50, scale: 0.9 }} 
-                animate={{ opacity: 1, y: 0, scale: 1 }} 
-                exit={{ opacity: 0, y: 50, scale: 0.9 }} 
-                className="chat-window"
-              >
-                  <div className="chat-window-header">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <Cpu size={16} /> <span>Gemini AI Assistant</span>
-                    </div>
-                    <button onClick={() => setIsChatOpen(false)} className="close-btn">×</button>
-                  </div>
-                  <div className="chat-window-body">
-                    {chatHistory.length === 0 && <p className="welcome-text">Hi! I'm your maintenance expert. Ask me anything about {activeMachine}.</p>}
-                    {chatHistory.map((msg, i) => (
-                      <div key={i} className={`chat-message ${msg.role}`}>
-                        <div className="message-content">{msg.text}</div>
-                      </div>
-                    ))}
-                    <div ref={chatEndRef} />
-                  </div>
-                  <div className="chat-window-footer">
-                    <input 
-                      type="text" 
-                      placeholder="Ask a question..." 
-                      value={chatQuery}
-                      onChange={(e) => setChatQuery(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && handleChat()}
-                    />
-                    <button onClick={handleChat} className="send-btn"><ArrowRight size={18} /></button>
-                  </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          
-          <motion.button 
-            className={`chat-toggle-btn ${isChatOpen ? 'active' : ''}`}
-            onClick={() => setIsChatOpen(!isChatOpen)}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            {isChatOpen ? <ZapOff size={24} /> : <MessageSquare size={24} />}
-          </motion.button>
-        </div>
       </main>
+
+      {/* 3. Right Sidebar: Gemini Diagnostic Assistant */}
+      <aside className="ai-sidebar">
+        <div className="ai-sidebar-header">
+          <Cpu size={20} color="var(--accent-color)" />
+          <h3>AI Diagnostic reasoning</h3>
+        </div>
+
+        <div className="ai-chat-container">
+          <div className="chat-messages">
+            {chatHistory.length === 0 && (
+              <div className="welcome-prompt">
+                <MessageSquare size={32} color="var(--text-muted)" />
+                <p>Gemini AI is ready. Ask anything about {activeMachine}'s health history or maintenance strategy.</p>
+              </div>
+            )}
+            {chatHistory.map((msg, i) => (
+              <motion.div
+                key={i}
+                className={`chat-bubble ${msg.role}`}
+                initial={{ opacity: 0, x: msg.role === 'user' ? 20 : -20 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
+                {msg.text}
+              </motion.div>
+            ))}
+            <div ref={chatEndRef} />
+          </div>
+
+          <div className="chat-input-area">
+            <div className="input-wrapper">
+              <input
+                type="text"
+                placeholder="Query system intel..."
+                value={chatQuery}
+                onChange={(e) => setChatQuery(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleChat()}
+              />
+              <button
+                className="ai-send-btn"
+                onClick={handleChat}
+              >
+                <ArrowRight size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }
+
 
 export default App;

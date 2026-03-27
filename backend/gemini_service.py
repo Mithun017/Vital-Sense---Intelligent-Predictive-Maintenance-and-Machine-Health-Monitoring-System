@@ -10,7 +10,7 @@ load_dotenv()
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    # Using 'gemini-flash-latest' which was verified via diagnostics
+    # Primary model
     MODEL = genai.GenerativeModel('gemini-flash-latest')
 else:
     MODEL = None
@@ -23,32 +23,33 @@ async def generate_health_summary(machine_id: str, sensor_data: Dict[str, Any], 
         return "Gemini AI is not configured. (Check GEMINI_API_KEY)"
 
     prompt = f"""
-    You are an expert industrial maintenance assistant.
-    Analyze the following machine data and provide a concise, natural language summary:
-    
-    Machine ID: {machine_id}
-    Current Status: {status}
-    Sensor Data:
-    - Temperature: {sensor_data.get('temperature')}°C
-    - Vibration: {sensor_data.get('vibration')} mm/s
-    - Motor Load: {sensor_data.get('current')}A
-    
-    Summarize what this means for the machine and suggest a quick action if necessary.
-    Keep it professional and actionable (max 2 sentences).
+    Analyze this machine data:
+    Machine: {machine_id}
+    Status: {status}
+    Vitals: {sensor_data}
+    Provide a 1-sentence technical diagnostic.
     """
     
-    try:
-        # 1. Primary: gemini-flash-latest
-        response = await MODEL.generate_content_async(prompt)
-        return response.text
-    except Exception:
+    # Try multiple models in order of intelligence/cost
+    models_to_try = [
+        'gemini-flash-latest',
+        'gemini-2.5-flash',
+        'gemini-flash-lite-latest',
+        'gemini-pro-latest'
+    ]
+
+    for m_name in models_to_try:
         try:
-            # 2. Secondary: gemini-pro-latest
-            fallback_1 = genai.GenerativeModel('gemini-pro-latest')
-            response = await fallback_1.generate_content_async(prompt)
+            m = genai.GenerativeModel(m_name)
+            response = await m.generate_content_async(prompt)
             return response.text
-        except Exception:
-             return "AI Summary Error: Model availability issues. Please check your API key quota."
+        except Exception as e:
+            err_str = str(e)
+            if "429" in err_str:
+                continue # Try next model or fallback to quota error
+            continue
+            
+    return "AI Summary: API Quota Exceeded. Please check your Google AI Studio plan."
 
 async def answer_user_query(query: str, last_known_state: Dict[str, Any]):
     """
@@ -58,20 +59,26 @@ async def answer_user_query(query: str, last_known_state: Dict[str, Any]):
         return "I'm sorry, I cannot answer queries without a configured Gemini API key."
 
     prompt = f"""
-    The user is asking: "{query}"
-    The current machine state is: {last_known_state}
-    Provide a helpful, technical yet easy-to-understand answer based on this state.
+    The user asks: "{query}"
+    Machine state: {last_known_state}
+    Provide a short, professional response.
     """
     
-    try:
-        # 1. Primary
-        response = await MODEL.generate_content_async(prompt)
-        return response.text
-    except Exception:
+    models_to_try = [
+        'gemini-flash-latest',
+        'gemini-2.0-flash',
+        'gemini-flash-lite-latest',
+        'gemini-pro-latest'
+    ]
+
+    for m_name in models_to_try:
         try:
-            # 2. Secondary
-            fallback_1 = genai.GenerativeModel('gemini-pro-latest')
-            response = await fallback_1.generate_content_async(prompt)
+            m = genai.GenerativeModel(m_name)
+            response = await m.generate_content_async(prompt)
             return response.text
-        except Exception:
-            return "AI Assistant Error: Connectivity issue with Gemini models. Check your API settings."
+        except Exception as e:
+            if "429" in str(e):
+                continue
+            continue
+
+    return "AI Assistant: Your API key has exceeded its free tier quota (429). Please try again later or upgrade your plan at ai.google.dev."
