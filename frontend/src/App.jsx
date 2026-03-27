@@ -78,8 +78,19 @@ function App() {
   const [systemOverview, setSystemOverview] = useState([]);
   const [chatQuery, setChatQuery] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const chatEndRef = useRef(null);
+  const scrollRef = useRef(null);
+
+  // Markdown handling for Phase 13 (Bold only)
+  const renderContent = (text) => {
+    if (!text) return null;
+    return text.split(/(\*\*.*?\*\*)/g).map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i} style={{ color: 'var(--accent-color)', fontWeight: '700' }}>{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
 
   const fetchData = async () => {
     try {
@@ -196,7 +207,7 @@ function App() {
                 <Cpu size={16} color="var(--accent-color)" />
               </div>
               <p className="ai-report-text">
-                {health.ai_summary || "Computing fleet intelligence..."}
+                {renderContent(health.ai_summary) || "Computing fleet intelligence..."}
               </p>
               <div className="confidence-badge">98% AI Confidence</div>
            </div>
@@ -298,11 +309,11 @@ function App() {
                     </div>
                   )}
                   {chatHistory.map((msg, i) => (
-                    <div key={i} className={`chat-bubble-wrapper ${msg.role}`}>
-                      <div className="chat-bubble">
-                        {msg.text}
-                      </div>
-                    </div>
+                     <div key={i} className={`chat-bubble-wrapper ${msg.role}`}>
+                       <div className="chat-bubble">
+                         {renderContent(msg.text)}
+                       </div>
+                     </div>
                   ))}
                   <div ref={chatEndRef} />
                 </div>
