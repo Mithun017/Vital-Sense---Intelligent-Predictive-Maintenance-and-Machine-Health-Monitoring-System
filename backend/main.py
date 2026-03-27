@@ -51,6 +51,9 @@ async def ingest_sensor_data(data: SensorData):
     # Note: Using small delay or background task if it's too slow in production
     ai_summary = await generate_health_summary(data.machine_id, sensor_dict, status)
     
+    # 5. Energy & Efficiency (Phase 10)
+    energy_data = ENGINE.calculate_efficiency_metrics(sensor_dict)
+    
     prediction = {
         "machine_id": data.machine_id,
         "health_status": status,
@@ -59,6 +62,7 @@ async def ingest_sensor_data(data: SensorData):
         "xai_explanations": xai_data,
         "recommendations": recommendations,
         "ai_summary": ai_summary,
+        "energy_metrics": energy_data,
         "timestamp": datetime.now(timezone.utc)
     }
     await save_prediction(prediction)

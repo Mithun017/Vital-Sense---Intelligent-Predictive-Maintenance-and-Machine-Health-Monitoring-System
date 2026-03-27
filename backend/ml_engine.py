@@ -108,5 +108,35 @@ class AdvancedMLEngine:
             
         return recs
 
+    def calculate_efficiency_metrics(self, sensor_data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Phase 10: Energy & Efficiency Calculation.
+        Models mechanical and electrical losses based on thermal and frictional state.
+        """
+        voltage = sensor_data.get("voltage", 230.0)
+        current = sensor_data.get("current", 12.0)
+        temp = sensor_data.get("temperature", 65.0)
+        vibe = sensor_data.get("vibration", 2.0)
+        
+        # 1. Power Consumption (Watts)
+        # Assuming P = V * I * pf (Industrial Power Factor ~0.85)
+        power_factor = 0.85
+        power_watts = voltage * current * power_factor
+        
+        # 2. Efficiency Index (%)
+        # Base efficiency for a premium motor is ~96%
+        # Thermal degradation: loss of ~0.1% per 5°C above nominal (65°C)
+        thermal_loss = max(0, (temp - 65) * 0.02)
+        # Frictional/Vibrational loss: loss of ~0.2% per 2mm/s above nominal (2mm/s)
+        mechanical_loss = max(0, (vibe - 2) * 0.1)
+        
+        efficiency = 96.5 - thermal_loss - mechanical_loss
+        
+        return {
+            "power_watts": round(power_watts, 2),
+            "efficiency_pct": round(max(75.0, efficiency), 1),
+            "voltage_v": round(voltage, 1)
+        }
+
 # Singleton instance
 ENGINE = AdvancedMLEngine()

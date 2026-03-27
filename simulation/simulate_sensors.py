@@ -28,11 +28,15 @@ def generate_sensor_data(machine_id, fault_type=None):
     elif random.random() < 0.02: # Occasional random spike
         temp += random.uniform(10, 20)
         
+    # Voltage (Phase 10)
+    volt = random.normalvariate(230, 2)
+    
     return {
         "machine_id": machine_id,
         "temperature": round(temp, 2),
         "vibration": round(vibe, 2),
         "current": round(curr, 2),
+        "voltage": round(volt, 1),
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
@@ -57,6 +61,10 @@ def main():
                 rul = pred.get("estimated_rul", "N/A")
                 
                 print(f"[{datetime.now().strftime('%H:%M:%S')}] {args.id} | Status: {status} | RUL: {rul}h")
+                
+                energy = pred.get("energy_metrics", {})
+                if energy:
+                    print(f"     >> Energy: {energy.get('power_watts')}W | Eff: {energy.get('efficiency_pct')}%")
                 
                 if "alert" in res_json:
                     print(f"!!! ALERT: {res_json['alert']['message']} !!!")

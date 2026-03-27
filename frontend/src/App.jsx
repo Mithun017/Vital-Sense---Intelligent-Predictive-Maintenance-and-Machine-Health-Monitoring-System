@@ -200,6 +200,26 @@ function App() {
               </p>
               <div className="confidence-badge">98% AI Confidence</div>
            </div>
+
+           <div className="glass-card energy-card">
+              <div className="card-header">
+                <h3>Energy Monitor (Phase 10)</h3>
+                <Zap size={16} color="#fbbf24" />
+              </div>
+              <div className="energy-grid">
+                 <div className="energy-stat">
+                   <span className="stat-value">{health.energy_metrics?.power_watts || "0"}W</span>
+                   <span className="stat-label">Power Load</span>
+                 </div>
+                 <div className="energy-stat">
+                   <span className="stat-value">{health.energy_metrics?.efficiency_pct || "0"}%</span>
+                   <span className="stat-label">Efficiency Index</span>
+                 </div>
+              </div>
+              <p className="energy-tip">
+                {health.energy_metrics?.efficiency_pct < 90 ? "⚠️ High losses detected. Check thermal dissipation." : "✨ Optimal performance profile."}
+              </p>
+           </div>
         </section>
 
         {/* Real-time Visualization */}
@@ -264,7 +284,7 @@ function App() {
                     <Cpu size={18} color="#3b82f6" />
                     <div>
                       <p className="chat-title">Maintenance GenAI</p>
-                      <p className="chat-subtitle">Online • Gemini 1.5 Powered</p>
+                      <p className="chat-subtitle">Online • Groq Cloud Powered</p>
                     </div>
                   </div>
                   <button className="close-btn" onClick={() => setIsChatOpen(false)}>×</button>

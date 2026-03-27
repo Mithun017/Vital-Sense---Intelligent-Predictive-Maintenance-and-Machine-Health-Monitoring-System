@@ -367,6 +367,47 @@ body {
   cursor: pointer;
 }
 
+/* Phase 10: Energy & Efficiency Panel */
+.energy-card {
+  min-width: 280px;
+}
+
+.energy-grid {
+  display: flex;
+  justify-content: space-around;
+  margin: 1.25rem 0;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 1rem;
+  border: 1px solid var(--glass-border);
+}
+
+.energy-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.energy-stat .stat-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fbbf24;
+}
+
+.energy-stat .stat-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.energy-tip {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+}
+
 /* Scrollbars */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 10px; }
