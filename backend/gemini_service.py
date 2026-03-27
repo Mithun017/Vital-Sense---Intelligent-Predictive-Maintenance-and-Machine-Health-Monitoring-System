@@ -1,5 +1,4 @@
 import google.generativeai as genai
-from groq import Groq
 import os
 from typing import Dict, Any
 from dotenv import load_dotenv
@@ -11,67 +10,81 @@ load_dotenv()
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    MODEL = genai.GenerativeModel('gemini-flash-latest')
+    # Using 'gemini-2.0-flash' as primary
+    MODEL = genai.GenerativeModel('gemini-2.0-flash')
 else:
     MODEL = None
 
-# Configure Groq
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
-GROQ_CLIENT = Groq(api_key=GROQ_API_KEY) if GROQ_API_KEY else None
-
-async def get_ai_response(prompt: str):
-    """
-    Orchestrate multiple AI providers to get a response.
-    Gemini (Primary) -> Groq (Fallback)
-    """
-    
-    # 1. Try Gemini Models
-    gemini_models = ['gemini-flash-latest', 'gemini-2.0-flash', 'gemini-pro-latest']
-    for m_name in gemini_models:
-        try:
-            m = genai.GenerativeModel(m_name)
-            # generate_content_async is not always available in all SDK versions, 
-            # using sync for stability if needed, but keeping async if possible
-            response = m.generate_content(prompt)
-            return response.text
-        except Exception as e:
-            if "429" in str(e) or "404" in str(e):
-                continue
-            
-    # 2. Try Groq (Ultra-fast Fallback)
-    if GROQ_CLIENT:
-        try:
-            chat_completion = GROQ_CLIENT.chat.completions.create(
-                messages=[{"role": "user", "content": prompt}],
-                model="llama-3.3-70b-versatile",
-            )
-            return chat_completion.choices[0].message.content
-        except Exception as e:
-            return f"AI Error (Gemini/Groq Exhausted): {str(e)}"
-
-    return "AI Providers are offline or quota-limited. Please check API keys."
-
 async def generate_health_summary(machine_id: str, sensor_data: Dict[str, Any], status: str):
     """
-    Use multi-provider AI to generate a human-friendly health summary.
+    Use Gemini to generate a human-friendly health summary.
     """
+    if not MODEL:
+        return "Gemini AI is not configured. (Check GEMINI_API_KEY)"
+
     prompt = f"""
-    Analyze this machine data:
-    Machine: {machine_id}
-    Status: {status}
-    Vitals: {sensor_data}
-    Provide a 1-sentence technical diagnostic summary for an engineer.
+    You are an expert industrial maintenance assistant.
+    Analyze the following machine data and provide a concise, natural language summary:
+    
+    Machine ID: {machine_id}
+    Current Status: {status}
+    Sensor Data:
+    - Temperature: {sensor_data.get('temperature')}°C
+    - Vibration: {sensor_data.get('vibration')} mm/s
+    - Motor Load: {sensor_data.get('current')}A
+    
+    Summarize what this means for the machine and suggest a quick action if necessary.
+    Keep it professional and actionable (max 2 sentences).
     """
-    return await get_ai_response(prompt)
+    
+    try:
+        # 1. Primary
+        response = await MODEL.generate_content_async(prompt)
+        return response.text
+    except Exception:
+        try:
+            # 2. Secondary
+            f1 = genai.GenerativeModel('gemini-flash-latest')
+            response = await f1.generate_content_async(prompt)
+            return response.text
+        except Exception:
+            try:
+                # 3. Tertiary
+                f2 = genai.GenerativeModel('gemini-pro-latest')
+                response = await f2.generate_content_async(prompt)
+                return response.text
+            except Exception as e:
+                 if "429" in str(e):
+                     return "AI Summary: API Quota reached (Free Tier). Insights will resume soon."
+                 return "AI Summary: Monitoring active. AI insights temporarily limited."
 
 async def answer_user_query(query: str, last_known_state: Dict[str, Any]):
     """
-    Answer user queries about the machine health using multi-provider AI.
+    Answer user queries about the machine health using Gemini.
     """
+    if not MODEL:
+        return "I'm sorry, I cannot answer queries without a configured Gemini API key."
+
     prompt = f"""
-    Context: Industrial Predictive Maintenance System
-    Machine state: {last_known_state}
-    User Query: "{query}"
-    Provide a short, professional, and technical answer.
+    The user is asking: "{query}"
+    The current machine state is: {last_known_state}
+    Provide a helpful, technical yet easy-to-understand answer based on this state.
     """
-    return await get_ai_response(prompt)
+    
+    try:
+        response = await MODEL.generate_content_async(prompt)
+        return response.text
+    except Exception:
+        try:
+            f1 = genai.GenerativeModel('gemini-flash-latest')
+            response = await f1.generate_content_async(prompt)
+            return response.text
+        except Exception:
+            try:
+                f2 = genai.GenerativeModel('gemini-pro-latest')
+                response = await f2.generate_content_async(prompt)
+                return response.text
+            except Exception as e:
+                if "429" in str(e):
+                    return "AI Assistant: Your daily API quota has been reached. Please try again later."
+                return "AI Assistant is experiencing connectivity issues. Please check logs."
