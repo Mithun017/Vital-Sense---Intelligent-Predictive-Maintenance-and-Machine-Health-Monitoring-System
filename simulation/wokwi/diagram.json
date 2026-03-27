@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "author": "Vital Sense AI",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-v1", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    { "type": "wokwi-dht22", "id": "dht", "top": -150, "left": 150, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "pot1", "top": 200, "left": -100, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "pot2", "top": 200, "left": 100, "attrs": {} }
+  ],
+  "connections": [
+    [ "esp:GND.1", "dht:GND", "black", [ "v0" ] ],
+    [ "esp:3V3", "dht:VCC", "red", [ "v0" ] ],
+    [ "esp:D15", "dht:SDA", "blue", [ "v0" ] ],
+    
+    [ "esp:GND.1", "pot1:GND", "black", [ "v0" ] ],
+    [ "esp:3V3", "pot1:VCC", "red", [ "v0" ] ],
+    [ "esp:D34", "pot1:SIG", "green", [ "v0" ] ],
+    
+    [ "esp:GND.1", "pot2:GND", "black", [ "v0" ] ],
+    [ "esp:3V3", "pot2:VCC", "red", [ "v0" ] ],
+    [ "esp:D35", "pot2:SIG", "yellow", [ "v0" ] ]
+  ]
+}
