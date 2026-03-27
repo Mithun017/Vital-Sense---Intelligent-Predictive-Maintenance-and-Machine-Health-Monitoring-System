@@ -10,8 +10,8 @@ load_dotenv()
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    # Using 'gemini-1.5-flash' which is widely available
-    MODEL = genai.GenerativeModel('gemini-1.5-flash')
+    # Using 'gemini-1.5-flash-latest' as primary
+    MODEL = genai.GenerativeModel('gemini-1.5-flash-latest')
 else:
     MODEL = None
 
@@ -38,17 +38,23 @@ async def generate_health_summary(machine_id: str, sensor_data: Dict[str, Any], 
     """
     
     try:
-        # Prioritize 1.5-flash for performance and reasoning
+        # 1. Primary: 1.5-flash-latest
         response = await MODEL.generate_content_async(prompt)
         return response.text
-    except Exception as e:
-        # Fallback in case of model availability issues
+    except Exception:
         try:
-            fallback_model = genai.GenerativeModel('gemini-pro')
-            response = await fallback_model.generate_content_async(prompt)
+            # 2. Secondary: gemini-1.5-flash
+            fallback_1 = genai.GenerativeModel('gemini-1.5-flash')
+            response = await fallback_1.generate_content_async(prompt)
             return response.text
-        except:
-             return f"AI Summary Error: {str(e)}"
+        except Exception:
+            try:
+                # 3. Tertiary: gemini-pro
+                fallback_2 = genai.GenerativeModel('gemini-pro')
+                response = await fallback_2.generate_content_async(prompt)
+                return response.text
+            except Exception:
+                 return "AI Summary Error: Integration issues with all models. Please check API key/quota."
 
 async def answer_user_query(query: str, last_known_state: Dict[str, Any]):
     """
@@ -64,12 +70,20 @@ async def answer_user_query(query: str, last_known_state: Dict[str, Any]):
     """
     
     try:
+        # 1. Primary
         response = await MODEL.generate_content_async(prompt)
         return response.text
-    except Exception as e:
+    except Exception:
         try:
-            fallback_model = genai.GenerativeModel('gemini-pro')
-            response = await fallback_model.generate_content_async(prompt)
+            # 2. Secondary
+            fallback_1 = genai.GenerativeModel('gemini-1.5-flash')
+            response = await fallback_1.generate_content_async(prompt)
             return response.text
-        except:
-            return f"AI Assistant Error: {str(e)}"
+        except Exception:
+            try:
+                # 3. Tertiary
+                fallback_2 = genai.GenerativeModel('gemini-pro')
+                response = await fallback_2.generate_content_async(prompt)
+                return response.text
+            except Exception:
+                return "AI Assistant Error: Integration issues with all Gemini models. Check your API settings."
