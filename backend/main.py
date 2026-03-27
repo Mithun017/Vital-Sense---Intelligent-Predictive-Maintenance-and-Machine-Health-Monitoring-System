@@ -114,8 +114,8 @@ async def get_system_overview():
         health = await get_machine_health(m)
         overview.append({
             "machine_id": m,
-            "status": health.get("health_status", "UNKNOWN"),
-            "probability": health.get("failure_probability", 0)
+            "status": health.get("health_status", "UNKNOWN") if health else "OFFLINE",
+            "probability": health.get("failure_probability", 0) if health else 0
         })
     return sanitize_data(overview)
 
