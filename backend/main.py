@@ -97,7 +97,7 @@ async def get_dashboard_stats(machine_id: str):
 @app.get("/active-machines")
 async def get_active_machines():
     # Phase 6: Multi-machine support
-    return ["M-101", "M-102", "M-103"]
+    return ["M-101", "M-102"]
 
 @app.get("/history/{machine_id}")
 async def get_long_history(machine_id: str, limit: int = 50):
@@ -108,7 +108,7 @@ async def get_long_history(machine_id: str, limit: int = 50):
 @app.get("/system-overview")
 async def get_system_overview():
     """Get a high-level overview of all monitored machines."""
-    machines = ["M-101", "M-102", "M-103"]
+    machines = ["M-101", "M-102"]
     overview = []
     for m in machines:
         health = await get_machine_health(m)
