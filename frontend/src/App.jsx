@@ -78,6 +78,7 @@ function App() {
   const [systemOverview, setSystemOverview] = useState([]);
   const [chatQuery, setChatQuery] = useState("");
   const [chatHistory, setChatHistory] = useState([]);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const chatEndRef = useRef(null);
   const scrollRef = useRef(null);
 
